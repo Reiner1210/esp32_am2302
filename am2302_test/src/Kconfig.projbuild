@@ -1,0 +1,74 @@
+menu "AM3202 Test"
+
+choice AM3202_GPIO_PIN
+   bool "GPIO pin"
+   default GPIO_13
+   help
+       Specify the GPIO pin which is used.
+
+config GPIO_0
+   bool "GPIO_0"
+config GPIO_2
+   bool "GPIO_2"
+config GPIO_4
+   bool "GPIO_4"
+config GPIO_5
+   bool "GPIO_5"
+config GPIO_12
+   bool "GPIO_12"
+config GPIO_13
+   bool "GPIO_13"
+config GPIO_14
+   bool "GPIO_14"
+config GPIO_15
+   bool "GPIO_15"
+config GPIO_16
+   bool "GPIO_16"
+config GPIO_17
+   bool "GPIO_17"
+config GPIO_18
+   bool "GPIO_18"
+config GPIO_19
+   bool "GPIO_19"
+config GPIO_21
+   bool "GPIO_21"
+config GPIO_22
+   bool "GPIO_22"
+config GPIO_23
+   bool "GPIO_23"
+config GPIO_25
+   bool "GPIO_25"
+config GPIO_26
+   bool "GPIO_26"
+config GPIO_27
+   bool "GPIO_27"
+config GPIO_32
+   bool "GPIO_32"
+config GPIO_33
+   bool "GPIO_33"
+endchoice
+
+config AM3202_GPIO_PIN
+    int
+    default 0 if GPIO_0
+    default 2 if GPIO_2
+    default 4 if GPIO_4
+    default 5 if GPIO_5
+    default 12 if GPIO_12
+    default 13 if GPIO_13
+    default 14 if GPIO_14
+    default 15 if GPIO_15
+    default 16 if GPIO_16
+    default 17 if GPIO_17
+    default 18 if GPIO_18
+    default 19 if GPIO_19
+    default 21 if GPIO_21
+    default 22 if GPIO_22
+    default 23 if GPIO_23
+    default 25 if GPIO_25
+    default 26 if GPIO_26
+    default 27 if GPIO_27
+    default 32 if GPIO_32
+    default 33 if GPIO_33
+
+endmenu
