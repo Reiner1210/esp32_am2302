@@ -16,7 +16,7 @@
 
 #define INIT_DELAY						(1000)		// 1msec
 #define PULSE_TIMEOUT					(120)		// no pulse is longer than 120µsec
-#define INIT_RESPONSE_PULSE_WIDTH_MIN	(65)		// Init response puls min width
+#define INIT_RESPONSE_PULSE_WIDTH_MIN	(60)		// Init response puls min width - sometimes the first one is detected shorter
 #define INIT_RESPONSE_PULSE_WIDTH_MAX	(85)		// Init response puls max width
 #define READ_INTERVAL					(2000)		// 2sec
 
@@ -56,6 +56,14 @@ bool am2302_read_sensor(am2302_data_t* config_data, float* temperature, float* h
 	{
 		if (!config_data->last_read || (xTaskGetTickCount() - config_data->last_read) >= pdMS_TO_TICKS(READ_INTERVAL))
 		{
+			uint16_t hum = 0;
+			uint16_t temp = 0;
+			uint8_t check = 0;
+			uint32_t data[82];
+			int anzahl = sizeof(data)/sizeof(data[0]), i;
+			
+			flag = true;
+			
 			gpio_pad_select_gpio(config_data->pin);
 			gpio_set_direction(config_data->pin, GPIO_MODE_INPUT);
 			gpio_set_pull_mode(config_data->pin, GPIO_PULLUP_ONLY);
@@ -65,14 +73,6 @@ bool am2302_read_sensor(am2302_data_t* config_data, float* temperature, float* h
 			gpio_set_level(config_data->pin, 0);
 			ets_delay_us(INIT_DELAY);
 
-			uint16_t hum = 0;
-			uint16_t temp = 0;
-			uint8_t check = 0;
-			uint32_t data[82];
-			int anzahl = sizeof(data)/sizeof(data[0]), i;
-			
-			flag = true;
-			
 			taskENTER_CRITICAL(&am2303_mutex); // no interrupts!
 			
 			gpio_set_direction(config_data->pin, GPIO_MODE_INPUT);
@@ -80,7 +80,6 @@ bool am2302_read_sensor(am2302_data_t* config_data, float* temperature, float* h
 			
 			if (config_data->init_set_active_high)
 				gpio_set_level(config_data->pin, 1); // normally not needed when using the MPSFET level shifter
-			// ets_delay_us(30);
 			
 			for (i=0; i<anzahl; i++)
 			{
@@ -89,7 +88,7 @@ bool am2302_read_sensor(am2302_data_t* config_data, float* temperature, float* h
 					flag = false;
 					break;
 				}
-			}					
+			}
 			
 			taskEXIT_CRITICAL(&am2303_mutex); // reenable interrupts
 			
@@ -100,10 +99,9 @@ bool am2302_read_sensor(am2302_data_t* config_data, float* temperature, float* h
 					if (i<2)
 					{
 						ESP_LOGV(log_tag, "Init --- Low: %u, High: %u", data[i], data[i+1]);
-//						if (data[i] < (i || !config_data->init_set_active_high ? INIT_RESPONSE_PULSE_WIDTH_MIN : INIT_RESPONSE_PULSE_WIDTH_MIN - 20) || data[i] > INIT_RESPONSE_PULSE_WIDTH_MAX)
 						if (data[i] < INIT_RESPONSE_PULSE_WIDTH_MIN || data[i] > INIT_RESPONSE_PULSE_WIDTH_MAX)
 						{
-							ESP_LOGD(log_tag, "Init %d out of range", i);
+							ESP_LOGD(log_tag, "Init %d out of range (%d), expedted in [%d,%d]", i, data[i], INIT_RESPONSE_PULSE_WIDTH_MIN, INIT_RESPONSE_PULSE_WIDTH_MAX);
 							flag = false;
 						}
 					}
@@ -139,10 +137,13 @@ bool am2302_read_sensor(am2302_data_t* config_data, float* temperature, float* h
 					}
 					else
 					{
+						if (temp & (1<<15))
+							temp = -(temp & ~(1<<15));
+						
 						if (temperature)
-							*temperature = temp/10.0f;
+							*temperature = ((int16_t)temp) / 10.0f;
 						if (humidity)
-							*humidity = hum/10.0f;
+							*humidity = hum / 10.0f;
 						
 						config_data->last_temperature = temp;
 						config_data->last_humidity = hum;
@@ -161,9 +162,9 @@ bool am2302_read_sensor(am2302_data_t* config_data, float* temperature, float* h
 			if (config_data->last_data_valid)
 			{
 				if (temperature)
-					*temperature = config_data->last_temperature/10.0f;
+					*temperature = ((int16_t)config_data->last_temperature) / 10.0f;
 				if (humidity)
-					*humidity = config_data->last_humidity/10.0f;
+					*humidity = config_data->last_humidity / 10.0f;
 				flag = true;
 			}
 			ESP_LOGW(log_tag, "Too short time interval between two reads !!!");
